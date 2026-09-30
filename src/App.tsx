@@ -26,12 +26,25 @@ const getVisibleTodos = (todos: Todo[], filter: FilterStatus) => {
   }
 };
 
+const getFilterFromHash = (): FilterStatus => {
+  switch (window.location.hash) {
+    case '#/active':
+      return FilterStatus.Active;
+
+    case '#/completed':
+      return FilterStatus.Completed;
+
+    default:
+      return FilterStatus.All;
+  }
+};
+
 const TodoApp: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [isLoadingTodos, setIsLoadingTodos] = useState(true);
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
   const [deletingTodoIds, setDeletingTodoIds] = useState<number[]>([]);
-  const [selectedFilter, setSelectedFilter] = useState(FilterStatus.All);
+  const [selectedFilter, setSelectedFilter] = useState(getFilterFromHash);
   const [errorMessage, setErrorMessage] = useState<ErrorMessage | null>(null);
   const [focusVersion, setFocusVersion] = useState(0);
   const errorTimeoutId = useRef<number | null>(null);
@@ -62,6 +75,7 @@ const TodoApp: React.FC = () => {
     let isMounted = true;
 
     hideError();
+    setIsLoadingTodos(true);
 
     getTodos()
       .then(loadedTodos => {
@@ -88,6 +102,18 @@ const TodoApp: React.FC = () => {
       }
     };
   }, [hideError, showError]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setSelectedFilter(getFilterFromHash());
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
 
   const handleAddTodo = async (title: string): Promise<boolean> => {
     if (tempTodo) {
@@ -214,6 +240,16 @@ const TodoApp: React.FC = () => {
             </button>
           </footer>
         )}
+      </div>
+
+      <div
+        data-cy="TodoLoader"
+        className={classNames('modal', {
+          'is-active': isLoadingTodos,
+        })}
+      >
+        <div className="modal-background has-background-white-ter" />
+        <div className="loader" />
       </div>
 
       <ErrorNotification errorMessage={errorMessage} onClose={hideError} />
